@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英文單字翻牌配對遊戲</title>
+    <style>
+        body {
+            box-sizing: border-box;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100%;
+        }
+        
+        html {
+            height: 100%;
+        }
+        
+        .game-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .title {
+            font-size: 2.5rem;
+            color: #4a5568;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .score-board {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .score {
+            color: #48bb78;
+        }
+        
+        .attempts {
+            color: #ed8936;
+        }
+        
+        .timer {
+            color: #9f7aea;
+        }
+        
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+            perspective: 1000px;
+        }
+        
+        .card {
+            position: relative;
+            width: 100%;
+            height: 120px;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            transition: transform 0.6s ease;
+        }
+        
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+        
+        .card.matched {
+            pointer-events: none;
+        }
+        
+        .card.matched .card-front,
+        .card.matched .card-back {
+            border-color: #38a169;
+            box-shadow: 0 0 20px rgba(56, 161, 105, 0.5);
+        }
+        
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+        
+        .card-front {
+            background: linear-gradient(135deg, #4299e1 0%, #667eea 100%);
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .card-back {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            transform: rotateY(180deg);
+            font-size: 2.5rem;
+            color: #744210;
+        }
+        
+        .card-back.word {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #2d3748;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card.flipped:hover {
+            transform: rotateY(180deg) translateY(-5px);
+        }
+        
+        .wrong {
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .message {
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 2px solid #38a169;
+        }
+        
+        .error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 2px solid #e53e3e;
+        }
+        
+        .info {
+            background: #bee3f8;
+            color: #2a4365;
+            border: 2px solid #3182ce;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .game-over {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+            border-radius: 20px;
+            color: white;
+            margin: 20px 0;
+        }
+        
+        .game-over h2 {
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+        
+        .stats {
+            font-size: 1.2rem;
+            margin: 10px 0;
+        }
+        
+        .player-setup {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            border-radius: 20px;
+            margin: 20px 0;
+        }
+        
+        .player-setup h2 {
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+        
+        .name-input {
+            padding: 15px 20px;
+            border: 3px solid #4299e1;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            margin: 0 10px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        
+        .name-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .leaderboard {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 20px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+        
+        .leaderboard h3 {
+            text-align: center;
+            color: #744210;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+        
+        .leaderboard-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            margin: 10px 0;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .leaderboard-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+        }
+        
+        .leaderboard-item.current-player {
+            background: linear-gradient(135deg, #68d391 0%, #38b2ac 100%);
+            color: white;
+            font-weight: bold;
+        }
+        
+        .rank {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+            min-width: 40px;
+        }
+        
+        .rank.gold { color: #ffd700; }
+        .rank.silver { color: #c0c0c0; }
+        .rank.bronze { color: #cd7f32; }
+        
+        .player-info {
+            flex: 1;
+            margin: 0 15px;
+        }
+        
+        .player-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .player-details {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        .player-score {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #48bb78;
+        }
+        
+        .current-player .player-score {
+            color: white;
+        }
+        
+        .no-records {
+            text-align: center;
+            color: #744210;
+            font-style: italic;
+            padding: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .game-board {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            
+            .card {
+                height: 100px;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+            
+            .score-board {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .card-back {
+                font-size: 2rem;
+            }
+            
+            .card-back.word {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1 class="title">🃏 英文單字翻牌遊戲</h1>
+            <div class="score-board">
+                <div class="score">得分: <span id="score">0</span></div>
+                <div class="attempts">翻牌次數: <span id="attempts">0</span></div>
+                <div class="timer">時間: <span id="timer">00:00</span></div>
+            </div>
+        </div>
+        
+        <div id="message" class="message hidden"></div>
+        
+        <div id="playerSetup" class="player-setup">
+            <h2>🎮 準備開始遊戲</h2>
+            <div>
+                <input type="text" id="playerName" class="name-input" placeholder="請輸入你的名字" maxlength="20">
+                <button class="btn" onclick="confirmPlayer()">確認開始</button>
+            </div>
+        </div>
+        
+        <div class="controls hidden" id="gameControls">
+            <button class="btn" onclick="startGame()" id="startBtn">🎮 開始遊戲</button>
+            <button class="btn" onclick="resetGame()" id="resetBtn" disabled>🔄 重新開始</button>
+            <button class="btn" onclick="showAllCards()" id="previewBtn">👀 預覽3秒</button>
+        </div>
+        
+        <div class="game-board" id="gameBoard"></div>
+        
+        <div id="gameOver" class="game-over hidden">
+            <h2>🎉 恭喜完成！</h2>
+            <div class="stats">
+                <div>最終得分: <span id="finalScore"></span></div>
+                <div>總翻牌次數: <span id="finalAttempts"></span></div>
+                <div>完成時間: <span id="finalTime"></span></div>
+                <div>配對準確率: <span id="accuracy"></span></div>
+            </div>
+        </div>
+        
+        <div class="leaderboard" id="leaderboard">
+            <h3>🏆 排行榜</h3>
+            <div class="leaderboard-list" id="leaderboardList">
+                <div class="no-records">還沒有遊戲記錄，快來挑戰吧！</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const words = [
+            { word: 'Apple', image: '🍎' },
+            { word: 'Cat', image: '🐱' },
+            { word: 'Sun', image: '☀️' },
+            { word: 'House', image: '🏠' },
+            { word: 'Car', image: '🚗' },
+            { word: 'Tree', image: '🌳' },
+            { word: 'Book', image: '📚' },
+            { word: 'Heart', image: '❤️' }
+        ];
+
+        let gameCards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let score = 0;
+        let attempts = 0;
+        let gameStarted = false;
+        let gameTimer = null;
+        let startTime = null;
+        let canFlip = true;
+        let currentPlayer = '';
+        let currentGameId = null;
+
+        function createCards() {
+            gameCards = [];
+            
+            // 創建配對卡片（每個單字和圖片各一張）
+            words.forEach(item => {
+                gameCards.push({
+                    id: `word-${item.word}`,
+                    type: 'word',
+                    content: item.word,
+                    pair: item.word
+                });
+                gameCards.push({
+                    id: `image-${item.word}`,
+                    type: 'image',
+                    content: item.image,
+                    pair: item.word
+                });
+            });
+            
+            // 隨機打亂卡片
+            shuffleArray(gameCards);
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function confirmPlayer() {
+            const nameInput = document.getElementById('playerName');
+            const name = nameInput.value.trim();
+            
+            if (!name) {
+                showMessage('請輸入你的名字！ 😊', 'error');
+                return;
+            }
+            
+            currentPlayer = name;
+            document.getElementById('playerSetup').classList.add('hidden');
+            document.getElementById('gameControls').classList.remove('hidden');
+            
+            showMessage(`歡迎 ${name}！準備開始遊戲吧！ 🎮`, 'success');
+            loadLeaderboard();
+        }
+
+        function saveGameResult() {
+            if (!currentPlayer) return;
+            
+            const gameResult = {
+                id: currentGameId,
+                player: currentPlayer,
+                score: score,
+                attempts: attempts,
+                time: document.getElementById('timer').textContent,
+                accuracy: Math.round((matchedPairs * 2 / attempts) * 100),
+                date: new Date().toLocaleDateString('zh-TW')
+            };
+            
+            let leaderboard = JSON.parse(localStorage.getItem('wordGameLeaderboard') || '[]');
+            leaderboard.push(gameResult);
+            
+            // 按得分排序（得分高的在前）
+            leaderboard.sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                if (a.attempts !== b.attempts) return a.attempts - b.attempts;
+                return a.time.localeCompare(b.time);
+            });
+            
+            // 只保留前20名
+            leaderboard = leaderboard.slice(0, 20);
+            
+            localStorage.setItem('wordGameLeaderboard', JSON.stringify(leaderboard));
+            loadLeaderboard();
+        }
+
+        function loadLeaderboard() {
+            const leaderboard = JSON.parse(localStorage.getItem('wordGameLeaderboard') || '[]');
+            const leaderboardList = document.getElementById('leaderboardList');
+            
+            if (leaderboard.length === 0) {
+                leaderboardList.innerHTML = '<div class="no-records">還沒有遊戲記錄，快來挑戰吧！</div>';
+                return;
+            }
+            
+            leaderboardList.innerHTML = '';
+            
+            leaderboard.forEach((record, index) => {
+                const item = document.createElement('div');
+                item.className = 'leaderboard-item';
+                
+                if (record.id === currentGameId) {
+                    item.classList.add('current-player');
+                }
+                
+                let rankClass = '';
+                let rankIcon = '';
+                if (index === 0) {
+                    rankClass = 'gold';
+                    rankIcon = '🥇';
+                } else if (index === 1) {
+                    rankClass = 'silver';
+                    rankIcon = '🥈';
+                } else if (index === 2) {
+                    rankClass = 'bronze';
+                    rankIcon = '🥉';
+                }
+                
+                item.innerHTML = `
+                    <div class="rank ${rankClass}">
+                        ${rankIcon || (index + 1)}
+                    </div>
+                    <div class="player-info">
+                        <div class="player-name">${record.player}</div>
+                        <div class="player-details">
+                            ${record.attempts}次翻牌 • ${record.time} • ${record.accuracy}% • ${record.date}
+                        </div>
+                    </div>
+                    <div class="player-score">${record.score}分</div>
+                `;
+                
+                leaderboardList.appendChild(item);
+            });
+        }
+
+        function renderCards() {
+            const gameBoard = document.getElementById('gameBoard');
+            gameBoard.innerHTML = '';
+            
+            gameCards.forEach((card, index) => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'card';
+                cardElement.dataset.cardId = card.id;
+                cardElement.dataset.pair = card.pair;
+                cardElement.onclick = () => flipCard(cardElement);
+                
+                const frontClass = card.type === 'word' ? 'word' : '';
+                
+                cardElement.innerHTML = `
+                    <div class="card-front">
+                        <span>?</span>
+                    </div>
+                    <div class="card-back ${frontClass}">
+                        ${card.content}
+                    </div>
+                `;
+                
+                gameBoard.appendChild(cardElement);
+            });
+        }
+
+        function flipCard(cardElement) {
+            if (!gameStarted || !canFlip || cardElement.classList.contains('flipped') || 
+                cardElement.classList.contains('matched') || flippedCards.length >= 2) {
+                return;
+            }
+
+            cardElement.classList.add('flipped');
+            flippedCards.push(cardElement);
+            attempts++;
+            updateScore();
+
+            if (flippedCards.length === 2) {
+                canFlip = false;
+                setTimeout(checkMatch, 1000);
+            }
+        }
+
+        function checkMatch() {
+            const [card1, card2] = flippedCards;
+            const pair1 = card1.dataset.pair;
+            const pair2 = card2.dataset.pair;
+
+            if (pair1 === pair2) {
+                // 配對成功
+                card1.classList.add('matched');
+                card2.classList.add('matched');
+                matchedPairs++;
+                score += 20;
+                
+                showMessage('配對成功！ 🎉', 'success');
+                
+                // 檢查遊戲是否完成
+                if (matchedPairs === words.length) {
+                    endGame();
+                }
+            } else {
+                // 配對失敗
+                card1.classList.add('wrong');
+                card2.classList.add('wrong');
+                
+                showMessage('配對失敗，再試一次！ 😅', 'error');
+                
+                setTimeout(() => {
+                    card1.classList.remove('flipped', 'wrong');
+                    card2.classList.remove('flipped', 'wrong');
+                }, 1000);
+            }
+
+            flippedCards = [];
+            canFlip = true;
+            updateScore();
+        }
+
+        function startGame() {
+            if (!currentPlayer) {
+                showMessage('請先輸入你的名字！ 😊', 'error');
+                return;
+            }
+            
+            gameStarted = true;
+            matchedPairs = 0;
+            score = 0;
+            attempts = 0;
+            flippedCards = [];
+            canFlip = true;
+            currentGameId = Date.now().toString(); // 生成唯一遊戲ID
+            
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('resetBtn').disabled = false;
+            document.getElementById('previewBtn').disabled = false;
+            document.getElementById('gameOver').classList.add('hidden');
+            
+            createCards();
+            renderCards();
+            startTimer();
+            updateScore();
+            
+            showMessage(`${currentPlayer}，遊戲開始！找出所有配對吧！ 🚀`, 'info');
+        }
+
+        function resetGame() {
+            gameStarted = false;
+            stopTimer();
+            currentGameId = null;
+            
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('resetBtn').disabled = true;
+            document.getElementById('previewBtn').disabled = true;
+            document.getElementById('gameOver').classList.add('hidden');
+            document.getElementById('message').classList.add('hidden');
+            
+            const gameBoard = document.getElementById('gameBoard');
+            gameBoard.innerHTML = '';
+            
+            score = 0;
+            attempts = 0;
+            matchedPairs = 0;
+            updateScore();
+            resetTimer();
+            loadLeaderboard(); // 重新載入排行榜以移除當前玩家高亮
+        }
+
+        function showAllCards() {
+            if (!gameStarted) return;
+            
+            document.getElementById('previewBtn').disabled = true;
+            canFlip = false;
+            
+            // 翻開所有卡片
+            document.querySelectorAll('.card').forEach(card => {
+                if (!card.classList.contains('matched')) {
+                    card.classList.add('flipped');
+                }
+            });
+            
+            showMessage('記住卡片位置！ 👀', 'info');
+            
+            // 3秒後翻回去
+            setTimeout(() => {
+                document.querySelectorAll('.card').forEach(card => {
+                    if (!card.classList.contains('matched')) {
+                        card.classList.remove('flipped');
+                    }
+                });
+                canFlip = true;
+                document.getElementById('previewBtn').disabled = false;
+            }, 3000);
+        }
+
+        function startTimer() {
+            startTime = Date.now();
+            gameTimer = setInterval(updateTimer, 1000);
+        }
+
+        function stopTimer() {
+            if (gameTimer) {
+                clearInterval(gameTimer);
+                gameTimer = null;
+            }
+        }
+
+        function updateTimer() {
+            if (!startTime) return;
+            
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            
+            document.getElementById('timer').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function resetTimer() {
+            document.getElementById('timer').textContent = '00:00';
+            startTime = null;
+        }
+
+        function endGame() {
+            gameStarted = false;
+            stopTimer();
+            
+            const finalTime = document.getElementById('timer').textContent;
+            const accuracy = Math.round((matchedPairs * 2 / attempts) * 100);
+            
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalAttempts').textContent = attempts;
+            document.getElementById('finalTime').textContent = finalTime;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+            
+            // 保存遊戲結果到排行榜
+            saveGameResult();
+            
+            document.getElementById('gameOver').classList.remove('hidden');
+            document.getElementById('resetBtn').disabled = false;
+            
+            showMessage(`🏆 太棒了 ${currentPlayer}！你完成了所有配對！`, 'success');
+        }
+
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message ${type}`;
+            messageEl.classList.remove('hidden');
+            
+            setTimeout(() => {
+                messageEl.classList.add('hidden');
+            }, 3000);
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('attempts').textContent = attempts;
+        }
+
+        // 初始化遊戲
+        document.addEventListener('DOMContentLoaded', function() {
+            updateScore();
+            resetTimer();
+            loadLeaderboard();
+            
+            // 支援Enter鍵確認玩家名字
+            document.getElementById('playerName').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    confirmPlayer();
+                }
+            });
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98b3ea3200ea8098',t:'MTc1OTkwODQzNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
